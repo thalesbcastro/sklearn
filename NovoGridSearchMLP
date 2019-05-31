@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue May 28 14:56:24 2019
+
+@author: thales
+"""
+
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import GridSearchCV
+import pandas as pd
+
+base = pd.read_csv('./testes_outros_algoritmos.csv')
+
+array = base.values
+X = array[:, :14]
+y = array[:, 14:15]
+label = LabelEncoder() #Transformando as classes em valores numéricos
+y = label.fit_transform(y)
+#y = label.inverse_transform(y)
+y = y.ravel()
+
+'''
+    Inicialmente, verificou-se o número mais adequado de camadas ocultas, variando de 1 até 6, escolhendo-se 100 neurônios para cada uma delas. 
+    Desse modo, verificou-se, através da GridSearchCV, que o número, a princípio, seria de quatro camadas. Além disso, a semente para geração aleatória dos
+    pesos dos neurônios, apresentado por esta função, foi de 5 em uma escala de 0 a 9. 
+'''
+#parametros = [
+#        {
+#                'hidden_layer_sizes': [(100, 100, 100, 100), (100, 200, 100, 100),
+#                                       (100, 200, 200, 100), (200, 200, 200, 100),
+#                                       (200, 200, 200, 200)
+#                                      ],
+#                'random_state':[0,1,2,3,4,5]                
+#        }
+#       ] 
+'''
+    Em seguida, buscou-se encontrar a melhor combinação entre as funções de ativação e otimização. Percebeu-se que algumas combinações não convergiam em nenhuma hipótese, mesmo aumentando o número máximo de iterações, 
+    além de notar que não houve mudança significativa na acurácia. Desse maneira, resolveu-se deixar a função de ativação padrão, escolhida pela biblioteca, a ReLu (Rectified Linear units) que
+    vem se tornando bastante popular nos últimos anos, além de ser bastante simples, sendo representada por R(x)=max(0, x), ou seja, se x<0, R(x)=0 e se x>=0, R(x)=x [8]. Assim como a de otimização, 
+    a Adam que é um algoritmo baseado no gradiente de primeira ordem de funções objetivas estocásticas, baseado em estimativas adaptativas de momentos de baixa ordem [10]. 
+'''
+
+'''
+    Desse modo, como dito acima, escolhendo-se a função de otimização Adam, deve-se agora buscar a melhor combinação entre os seguintes parâmetros da rede:
+    taxa de aprendizado, beta 1, beta 2 e epsilon (atributos fornecidos pelo scklearn para a Adam). A taxa de aprendizado, que diz respeito a velocidade com que os parâmetros da rede são atualizados,
+    foi 0,2; beta 1 - valor que deve estar em [0,1) e que calcula a taxa de decaimento exponencial para as estimativas do primeiro vetor do momento [sklearn referência], teve seu melhor resultado em 0.96;
+    beta 2 - semelhante ao anterior, porém calcula as estimativas para o segundo vetor de momento que deve estar em [0, 1) [sklearn ref.], foi de 0.999999999, percebendo-se, neste caso, 
+    que foi um valor muito próximo a 1, tendo-se em mente que este não está incluso no intervalo. Por fim, o epsilon, que teve seu melhor resultado em 1e-06, é um valor que fornece uma estabilidade numérica [sklearn ref] para esta função de otimização
+    https://datascience.stackexchange.com/questions/410/choosing-a-learning-rate
+'''
+parametros = [
+        {
+#                'activation': ['identity', 'logistic', 'tanh', 'relu'],
+#                'solver': ['lbfgs','sgd','adam'],
+#                'learning_rate': ['constant', 'invscaling', 'adaptive'],
+                'learning_rate_init': [ .01, .1, .02, .2, 0.03, .3, .04, .4],
+#                'momentum': [.5, .6, .7, .8, .9]
+#                'nesterovs_momentum': [False, True],
+#                'early_stopping': [False, True]
+#                'early_stopping': [True, False],
+#                'beta_1': [.095, .096, .09655],
+#                'beta_2': [ .9999999, 0.9],
+#                'epsilon': [1e-6, 1e-7, 1e-8]
+                
+        }
+       ]
+'''
+    Parâmetro que será usado se o early_stopping for True: validation_fraction.
+'''
+mlpRede = MLPClassifier(verbose=0, random_state=5, 
+                        hidden_layer_sizes=(100, 100, 100, 100), 
+                        learning_rate_init=0.2,
+                        beta_1=0.096, beta_2=0.999999999, epsilon=1e-06, early_stopping=False)
+
+grid = GridSearchCV(mlpRede, param_grid=parametros, cv=3, n_jobs=4)
+
+grid_result = grid.fit(X, y)
+
+print('Melhor precisão: %f. Melhores parâmetros: %s' %(grid_result.best_score_, grid_result.best_params_))

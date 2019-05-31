@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon May 27 17:52:43 2019
+
+@author: thales
+"""
+
+import pandas as pd
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import LabelEncoder
+#from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.metrics import precision_score, confusion_matrix, accuracy_score, jaccard_similarity_score, mean_squared_error
+#from sklearn.preprocessing import MinMaxScaler, normalize, StandardScaler
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MaxAbsScaler
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import Normalizer, normalize
+from sklearn.preprocessing import QuantileTransformer
+def conjunto_treinamento(X, y):
+#    X = normalize(X)
+#    StandardScaler().fit_transform(X)
+#    MinMaxScaler().fit_transform(X)
+#    MaxAbsScaler().fit_transform(X)
+#    RobustScaler(quantile_range=(25, 75)).fit_transform(X)
+#    QuantileTransformer(output_distribution='normal').fit_transform(X)
+#    QuantileTransformer(output_distribution='uniform').fit_transform(X)
+    Normalizer().fit_transform(X)
+    kf = KFold(n_splits=3)
+    X1, X2, y_1, y_2 = [], [], [], []
+    for train_index, test_index in kf.split(X):
+        X1, X2, y_1, y_2 = X[train_index], X[test_index], y[train_index], y[test_index]
+    return X1, X2, y_1, y_2
+#from sklearn.model_selection import ShuffleSplit
+#from sklearn.pipeline import make_pipeline
+def previsao_validacao_cruzada(mlp, X, y):
+#    cv = ShuffleSplit(n_splits=5, test_size=0.3, random_state=0)
+    cv_results = cross_val_score(mlp, X, y, cv=5, scoring='accuracy')
+    print("Precisão\n %f (%f)" % (cv_results.mean(), cv_results.std()))
+    
+
+
+base = pd.read_csv('./testes_outros_algoritmos.csv')
+
+array = base.values
+X = array[:, :14]
+y = array[:, 14:15]
+label = LabelEncoder() #Transformando as classes em valores numéricos
+y = label.fit_transform(y)
+#y = label.inverse_transform(y)
+y = y.ravel()
+
+#mlp = MLPClassifier(solver='sgd', activation='tanh', learning_rate='adaptive', learning_rate_init=0.01, 
+#                   hidden_layer_sizes=(100, 260), 
+#                   momentum=0.9, nesterovs_momentum=False, 
+#                   early_stopping=True, max_iter=10000, random_state=0)
+mlp = MLPClassifier(verbose=0, random_state=5, 
+                        hidden_layer_sizes=(100, 100, 100, 100), 
+                        learning_rate_init=0.2,
+                        beta_1=0.096, beta_2=0.999999999, epsilon=1e-06, early_stopping=False)
+
+
+
+
+
+
+X_train, X_test, y_train, y_test = conjunto_treinamento(X, y)
+
+X_train = MinMaxScaler().fit_transform(X_train)
+X_test = MinMaxScaler().fit_transform(X_test)
+mlp.fit(X_train, y_train)
+y_pred = mlp.predict(X_test)
+
+print("Score de treinamento: %f" % mlp.score(X_train, y_train))
+print('Acerto na previsão (accuracy_score): %f' % accuracy_score(y_test, y_pred))
+print('Erro quadrático médio: %f' % mean_squared_error(y_test, y_pred))
+print('Índice de Jaccard (multiclass): %f' % jaccard_similarity_score(y_test, y_pred))
+matrix = confusion_matrix(y_test, y_pred)
+
+print(confusion_matrix(y_test, y_pred))
+
+#print(precision_score(y_test, y_pred, average=None))
+#print('Acerto na previsão (accuracy_score): %f' % accuracy_score(y_test, y_pred))
